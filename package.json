@@ -1,6 +1,6 @@
 {
   "name": "shopify-theme-mcp",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Local MCP server for editing Shopify themes from Claude Desktop. Wraps the Shopify CLI + local theme files with automatic git commits.",
   "type": "module",
   "bin": {

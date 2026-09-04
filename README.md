@@ -25,6 +25,8 @@ Claude ──stdio──> shopify-theme-mcp ──> local theme dir (git repo)
 ## Contents
 
 - [Requirements](#requirements)
+- [Installing the Shopify CLI](#installing-the-shopify-cli)
+- [Getting a Theme Access token](#getting-a-theme-access-token)
 - [Install](#install)
 - [Claude Desktop (local, stdio)](#claude-desktop-local-stdio)
 - [Tools](#tools)
@@ -42,25 +44,124 @@ Claude ──stdio──> shopify-theme-mcp ──> local theme dir (git repo)
 
 | | |
 |---|---|
-| **Node** | 18 or newer (`node --version`) |
-| **Shopify CLI** | `npm install -g @shopify/cli@latest`, verify with `shopify version` |
-| **Git** | Preinstalled on macOS; `apt install git` on Linux |
-| **Shopify auth** | A Theme Access password, or an interactive CLI login (below) |
+| **Node.js** | **22.12 or newer** — required by the Shopify CLI (`node --version`) |
+| **Shopify CLI** | See [Installing the Shopify CLI](#installing-the-shopify-cli) |
+| **Git** | Preinstalled on macOS; `sudo apt install git` on Debian/Ubuntu |
+| **Shopify auth** | A Theme Access password, or an interactive CLI login |
 
-### Shopify authentication
+> **On the Node version.** This package's own `engines` field says Node 18+, which is true of the
+> server itself, but the Shopify CLI it shells out to requires **22.12+**. Install 22.12 or newer or
+> theme commands will fail. [nvm](https://github.com/nvm-sh/nvm) is the easiest way to manage this:
+> `nvm install 22 && nvm use 22`.
 
-Pick one:
+---
 
-**Theme Access token (recommended).** Install the
-[Theme Access](https://apps.shopify.com/theme-access) app in your store admin, generate a password
-(`shptka_…`), and set it as `SHOPIFY_CLI_THEME_TOKEN`. No browser prompts, scoped to themes only —
-it cannot read orders or customers. Required for unattended/remote use.
+## Installing the Shopify CLI
 
-**Interactive login.** Run `shopify theme list --store my-store` once and complete the browser
-login; the CLI caches the session. Fine for local use, but it expires and can't be used headlessly.
+The CLI does the actual talking to Shopify — this server wraps it. Theme commands are built into
+`@shopify/cli`; there is no separate theme package to install any more.
 
-The server passes your environment through to the Shopify CLI, so `SHOPIFY_CLI_THEME_TOKEN` is
-picked up automatically when set.
+**npm** (any platform):
+
+```bash
+npm install -g @shopify/cli@latest
+```
+
+**Homebrew** (macOS):
+
+```bash
+brew tap shopify/shopify
+brew install shopify-cli
+```
+
+<details>
+<summary>yarn / pnpm</summary>
+
+```bash
+yarn global add @shopify/cli@latest
+# or
+pnpm install -g @shopify/cli@latest
+```
+
+</details>
+
+Verify the install — this must work before the MCP server will:
+
+```bash
+shopify version
+which shopify     # note this path; you may need it for Claude Desktop's PATH
+```
+
+If `shopify` isn't found, your global npm bin directory isn't on your `PATH`. Find it with
+`npm bin -g` and add it to your shell profile.
+
+> The CLI self-upgrades from v4.0 onward. If that is a problem on a server you manage,
+> disable it with `shopify config autoupgrade off`.
+
+---
+
+## Getting a Theme Access token
+
+This is the recommended way to authenticate, and the **only** option for headless or remote use.
+The token is scoped to themes only — it cannot read orders or customer data.
+
+### 1. Check you have permission
+
+- **Store owner** — access is automatic.
+- **Staff** — you need *Edit permissions* (including *Add and remove staff*) plus *Themes*
+  permissions.
+- **Collaborators** — you need *Themes* permissions under online store settings.
+
+If you don't have these, ask the store owner to generate the password and send it to you.
+
+### 2. Install the Theme Access app
+
+Go to the [Theme Access app](https://apps.shopify.com/theme-access) on the Shopify App Store, click
+**Add app**, then **Install app** in your admin to authorise it.
+
+### 3. Create a password
+
+In the Theme Access app, click **Create theme password**, enter the developer's name and email
+address, and submit. Shopify emails that address a link to the password.
+
+> ### ⚠️ You can only view the password once
+>
+> The emailed link **expires after 7 days, or immediately once the password has been viewed** —
+> whichever comes first. Copy it straight into your Claude Desktop config, systemd unit or password
+> manager the moment you open it. If you lose it, you cannot recover it; delete the entry and create
+> a new one.
+
+Theme Access passwords typically begin `shptka_`.
+
+### 4. Use it
+
+Set it as `SHOPIFY_CLI_THEME_TOKEN` wherever you configure the server (Claude Desktop `env` block,
+or the systemd unit). The server passes your environment through to the Shopify CLI, so it is picked
+up automatically.
+
+Test it independently of Claude first:
+
+```bash
+SHOPIFY_CLI_THEME_TOKEN=shptka_xxxx shopify theme list --store my-store
+```
+
+If that lists your themes, the MCP server will work.
+
+### Revoking a token
+
+In the Theme Access app, open the **Passwords** page, click **Delete** next to the developer, and
+confirm. Access is revoked immediately. Do this when someone leaves, or if a token is ever exposed.
+
+### Alternative: interactive login
+
+For local use only, you can skip the token entirely:
+
+```bash
+shopify theme list --store my-store
+```
+
+Complete the browser login and the CLI caches the session. This is fine on your own machine, but the
+session expires and cannot be used headlessly — remote mode needs a Theme Access token.
 
 ---
 
@@ -192,6 +293,7 @@ serialized through a global mutex, so concurrent sessions can't corrupt the repo
 
 ```bash
 # 1. dependencies
+# Node 22.12+ is required by the Shopify CLI
 curl -fsSL https://deb.nodesource.com/setup_22.x | sudo bash - && sudo apt install -y nodejs git
 sudo npm install -g @shopify/cli@latest
 
@@ -323,6 +425,18 @@ the Shopify CLI. Add its directory to the explicit `PATH` in your config — che
 
 **CLI asks for a browser login, or hangs in remote mode.** Set `SHOPIFY_CLI_THEME_TOKEN`.
 Interactive sessions expire and can't work headlessly.
+
+**Shopify CLI errors about the Node version.** The CLI requires Node 22.12+. Check with
+`node --version`; upgrade with `nvm install 22 && nvm use 22`, or reinstall Node from your package
+manager. This package's own `engines` field says 18+, but the CLI is the binding constraint.
+
+**You lost the Theme Access password.** It can only be viewed once and the link expires after 7
+days. Delete the entry on the Theme Access **Passwords** page and create a new one — see
+[Getting a Theme Access token](#getting-a-theme-access-token).
+
+**`401` / `Unauthorized` from theme commands.** The token was revoked, belongs to a different store,
+or `SHOPIFY_STORE` doesn't match it. Verify outside Claude with
+`SHOPIFY_CLI_THEME_TOKEN=… shopify theme list --store my-store`.
 
 **Search finds nothing for text you can see.** The section is probably disabled — retry with
 `include_hidden: true`. See [Hidden and disabled content](#hidden-and-disabled-content).

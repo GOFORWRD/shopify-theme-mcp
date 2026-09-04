@@ -1,0 +1,37 @@
+{
+  "name": "shopify-theme-mcp",
+  "version": "1.0.0",
+  "description": "Local MCP server for editing Shopify themes from Claude Desktop. Wraps the Shopify CLI + local theme files with automatic git commits.",
+  "type": "module",
+  "bin": {
+    "shopify-theme-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsc --watch"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.2",
+    "typescript": "^5.6.0"
+  },
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/GOFORWRD/shopify-theme-mcp.git"
+  },
+  "keywords": [
+    "mcp",
+    "shopify",
+    "shopify-theme",
+    "claude",
+    "model-context-protocol"
+  ]
+}
